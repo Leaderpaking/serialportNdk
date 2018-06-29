@@ -18,6 +18,7 @@ package zyserialport;
 
 
 
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -43,13 +44,17 @@ public class SerialPort {
 
 		/* Check access permission */
 		if (!device.canRead() || !device.canWrite()) {
+			DataOutputStream dataOutputStream = null;
 			try {
 				/* Missing read/write permission, trying to chmod the file */
 				Process su;
 				su = Runtime.getRuntime().exec("/system/bin/su");
-				String cmd = "chmod 666 " + device.getAbsolutePath() + "\n"
-						+ "exit\n";
-				su.getOutputStream().write(cmd.getBytes());
+				String cmd = "chmod -R 666 " + device.getAbsolutePath()
+						+ "\n" + "exit\n";
+				dataOutputStream = new DataOutputStream(su.getOutputStream());
+				dataOutputStream.write(cmd.getBytes());
+				dataOutputStream.flush();
+//				su.waitFor();
 				if ((su.waitFor() != 0) || !device.canRead()
 						|| !device.canWrite()) {
 					throw new SecurityException();
@@ -57,6 +62,10 @@ public class SerialPort {
 			} catch (Exception e) {
 				e.printStackTrace();
 				throw new SecurityException();
+			}finally {
+				if(null != dataOutputStream){
+					dataOutputStream.close();
+				}
 			}
 		}
 
